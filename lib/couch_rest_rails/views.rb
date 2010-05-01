@@ -83,17 +83,33 @@ module CouchRestRails
             updates = couchdb_design_doc['updates'].merge!(updates)
           end
 
+          validate_doc_update = nil
+          # fetch an existing validate doc if it exists
+          if couchdb_design_doc && couchdb_design_doc['validate_doc_update'] 
+            validate_doc_update =  couchdb_design_doc['validate_doc_update']
+          end
+
+          if File.exists?(File.join(designdoc, "validate_doc_update.js"))
+            if validate_doc_update
+              response << "Overwriting existing validate_doc_update in _design/#{File.basename(designdoc)}"
+            end
+            validate_doc_update = IO.read(File.join(designdoc, "validate_doc_update.js"))
+          end
+
+
           # Save or update
           if couchdb_design_doc.nil?
             couchdb_design_doc = {
               "_id" => "_design/#{File.basename(designdoc)}", 
               'language' => 'javascript',
               'views' => views,
-              'updates' => updates
+              'updates' => updates,
+              'validate_doc_update' => validate_doc_update
             }
           else
             couchdb_design_doc['views'] = views
             couchdb_design_doc['updates'] = updates
+            couchdb_design_doc['validate_doc_update'] = validate_doc_update
           end
           db_conn.save_doc(couchdb_design_doc)
           response << "Pushed views to #{full_db_name}/_design/#{File.basename(designdoc)}: #{views.keys.join(', ')}"
