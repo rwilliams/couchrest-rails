@@ -10,12 +10,15 @@ module CouchRestRails
         full_db_name = [COUCHDB_CONFIG[:db_prefix], File.basename(db), COUCHDB_CONFIG[:db_suffix]].join
         full_db_path = [COUCHDB_CONFIG[:host_path], '/', full_db_name].join
         
+        # Default to load from all design documents
+        design_doc_name = opts[:design_doc_name] || '*'
+        
         # Default to push all views for the given database
         view_name = opts[:view_name] || '*'
       
-        # Default to load views from all design documents
-        design_doc_name = opts[:design_doc_name] || '*'
-        
+        # Default to push all updates for the given database
+        update_name = opts[:update_name] || '*'
+      
         # Check for CouchDB database
         if !COUCHDB_SERVER.databases.include?(full_db_name)
           response << "Database #{db} (#{full_db_name}) does not exist"
@@ -54,20 +57,47 @@ module CouchRestRails
 
           end
           # Merge with existing views
-          views = couchdb_design_doc['views'].merge!(views) unless couchdb_design_doc.nil?
-        
+	  if ! couchdb_design_doc.nil? && couchdb_design_doc.has_key?('views')
+            views = couchdb_design_doc['views'].merge!(views)
+          end
+
+          # Assemble updates for each design document
+          updates = {}
+          Dir.glob(File.join(designdoc, "updates", update_name)).each do |update|
+            # Load update from filesystem 
+            upfunc = IO.read(update)    if File.exist?(update)
+            if upfunc.empty?
+              response << "No update files were found in #{CouchRestRails.views_path}/#{db}/#{File.basename(designdoc)}/updates/#{File.basename(update)}.js" 
+              next
+            else
+              updates[File.basename(update, '.js')] = upfunc
+            end
+
+            # Warn if overwriting updates on Couch 
+            if couchdb_design_doc && couchdb_design_doc['updates'] && couchdb_design_doc['updates'][File.basename(update, '.js')]
+              response << "Overwriting existing update '#{File.basename(update, '.js')}' in _design/#{File.basename(designdoc)}"
+            end
+          end
+          # Merge with existing updates
+	  if ! couchdb_design_doc.nil? && couchdb_design_doc.has_key?('updates')
+            updates = couchdb_design_doc['updates'].merge!(updates)
+          end
+
           # Save or update
           if couchdb_design_doc.nil?
             couchdb_design_doc = {
               "_id" => "_design/#{File.basename(designdoc)}", 
               'language' => 'javascript',
-              'views' => views
+              'views' => views,
+              'updates' => updates
             }
           else
             couchdb_design_doc['views'] = views
+            couchdb_design_doc['updates'] = updates
           end
           db_conn.save_doc(couchdb_design_doc)
           response << "Pushed views to #{full_db_name}/_design/#{File.basename(designdoc)}: #{views.keys.join(', ')}"
+          response << "Pushed updates to #{full_db_name}/_design/#{File.basename(designdoc)}: #{updates.keys.join(', ')}"
         end	# loop on design doc
       end	# loop on databases
     end
