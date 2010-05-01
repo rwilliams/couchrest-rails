@@ -93,12 +93,28 @@ Make sure you define your database in the model with the `use_database :<databas
 
 See the CouchRest documentation and specs for more information about CouchRest::ExtendedDocument. (The views defined here are in addition to the ones you can manually set up and push via rake in db/couch/views.)
 
+### CouchDB design documents
+
+CouchDB design documents, which contain views, and potentially other items are contained in a tree of the form:
+
+    db/couch/<database_name>/<design_document_name>
+                               |-- validate_doc_update.js
+                               |-- views
+                               |   `-- <view_name>
+                               |       |-- map.js
+                               |       `-- reduce.js
+                               |-- updates
+                               |   `-- <update_name>.js
+                               |-- shows
+                               |   `-- <show_name>.js
+                                and so on...
+                                   
 ### CouchDB views
 
 Custom views--outside of the ones defined in your CouchRestRails::Document models--that you want to push up to the CouchDB database/server instance should be in the following format:
 
-    db/couch/<database_name>/views
-                               |-- <design_document_name>
+    db/couch/<database_name>/<design_document_name>
+                               |-- views
                                    |-- <view_name>
                                        |-- map.js
                                        `-- reduce.js

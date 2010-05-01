@@ -59,7 +59,7 @@ module CouchRestRails
           # Save or update
           if couchdb_design_doc.nil?
             couchdb_design_doc = {
-              "_id" => "_design/#{File.basename(doc)}", 
+              "_id" => "_design/#{File.basename(designdoc)}", 
               'language' => 'javascript',
               'views' => views
             }
@@ -67,7 +67,7 @@ module CouchRestRails
             couchdb_design_doc['views'] = views
           end
           db_conn.save_doc(couchdb_design_doc)
-          response << "Pushed views to #{full_db_name}/_design/#{File.basename(doc)}: #{views.keys.join(', ')}"
+          response << "Pushed views to #{full_db_name}/_design/#{File.basename(designdoc)}: #{views.keys.join(', ')}"
         end	# loop on design doc
       end	# loop on databases
     end

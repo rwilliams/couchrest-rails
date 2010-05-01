@@ -7,12 +7,20 @@ module CouchRestRails
       
       CouchRestRails.process_database_method(database_name) do |db, response|
         
-        # Setup up views directory
-        database_views_path = File.join(RAILS_ROOT, CouchRestRails.views_path, db, 'views')
-        unless File.exist?(database_views_path)
-          FileUtils.mkdir_p(database_views_path)
-          response << "Created #{File.join(CouchRestRails.views_path, db, 'views')} views directory"
+        # Setup up database directory
+        database_path = File.join(RAILS_ROOT, CouchRestRails.views_path, db)
+        unless File.exist?(database_path)
+          FileUtils.mkdir_p(database_path)
+          response << "Created #{File.join(CouchRestRails.views_path, db)} design doc directory"
         end
+
+	# XXX no longer relevant at this level, unless we go snoop around designdoc land
+        # Setup up views directory
+        #database_views_path = File.join(RAILS_ROOT, CouchRestRails.views_path, db, 'views')
+        #unless File.exist?(database_views_path)
+        #  FileUtils.mkdir_p(database_views_path)
+        #  response << "Created #{File.join(CouchRestRails.views_path, db, 'views')} views directory"
+        #end
         
         # Setup the Lucene directory if enabled
         if CouchRestRails.use_lucene
