@@ -27,20 +27,21 @@ module CouchRestRails
           response << "Views directory (#{CouchRestRails.views_path}/#{db}) does not exist" 
           next
         end
-        
-        # Assemble views for each design document
+
+	# connect to database        
         db_conn = CouchRest.database(full_db_path)
-        
-        Dir.glob(File.join(RAILS_ROOT, CouchRestRails.views_path, db, "views", design_doc_name)).each do |doc|
-        
+
+	# For each design doc seen
+        Dir.glob(File.join(RAILS_ROOT, CouchRestRails.views_path, db, design_doc_name)).each do |designdoc|
+          couchdb_design_doc = db_conn.get("_design/#{File.basename(designdoc)}") rescue nil
+
+          # Assemble views for each design document
           views = {}
-          couchdb_design_doc = db_conn.get("_design/#{File.basename(doc)}") rescue nil
-          Dir.glob(File.join(doc, view_name)).each do |view|
-          
+          Dir.glob(File.join(designdoc, "views", view_name)).each do |view|
             # Load view from filesystem 
             map_reduce = assemble_view(view)
             if map_reduce.empty?
-              response << "No view files were found in #{CouchRestRails.views_path}/#{db}/views/#{File.basename(doc)}/#{File.basename(view)}" 
+              response << "No view files were found in #{CouchRestRails.views_path}/#{db}/#{File.basename(designdoc)}/views/#{File.basename(view)}" 
               next
             else
               views[File.basename(view)] = map_reduce
@@ -48,11 +49,10 @@ module CouchRestRails
 
             # Warn if overwriting views on Couch 
             if couchdb_design_doc && couchdb_design_doc['views'] && couchdb_design_doc['views'][File.basename(view)]
-              response << "Overwriting existing view '#{File.basename(view)}' in _design/#{File.basename(doc)}"
+              response << "Overwriting existing view '#{File.basename(view)}' in _design/#{File.basename(designdoc)}"
             end
 
           end
-        
           # Merge with existing views
           views = couchdb_design_doc['views'].merge!(views) unless couchdb_design_doc.nil?
         
@@ -67,13 +67,9 @@ module CouchRestRails
             couchdb_design_doc['views'] = views
           end
           db_conn.save_doc(couchdb_design_doc)
-
           response << "Pushed views to #{full_db_name}/_design/#{File.basename(doc)}: #{views.keys.join(', ')}"
-        
-        end
-        
-      end
-    
+        end	# loop on design doc
+      end	# loop on databases
     end
 
     # Assemble views 
