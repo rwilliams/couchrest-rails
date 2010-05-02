@@ -167,10 +167,19 @@ module CouchRestRails
             couchdb_design_doc['shows'] = shows
           end
           db_conn.save_doc(couchdb_design_doc)
+
           response << "Pushed views to #{full_db_name}/_design/#{File.basename(designdoc)}: #{views.keys.join(', ')}"
           response << "Pushed updates to #{full_db_name}/_design/#{File.basename(designdoc)}: #{updates.keys.join(', ')}"
           response << "Pushed lists to #{full_db_name}/_design/#{File.basename(designdoc)}: #{lists.keys.join(', ')}"
           response << "Pushed shows to #{full_db_name}/_design/#{File.basename(designdoc)}: #{shows.keys.join(', ')}"
+
+          if File.exists?(File.join(designdoc, "attachments")) && File.directory?(File.join(designdoc, "attachments"))
+            Dir.glob(File.join(designdoc, "attachments", "**/*")).each do |attachment|
+                next if File.directory?(attachment)
+		name = attachment.sub(File.join(designdoc, "attachments") + "/", "")
+                couchdb_design_doc.put_attachment(name, IO.read(attachment))
+            end
+          end
         end	# loop on design doc
       end	# loop on databases
     end
