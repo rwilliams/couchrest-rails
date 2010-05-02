@@ -19,6 +19,12 @@ module CouchRestRails
         # Default to push all updates for the given database
         update_name = opts[:update_name] || '*'
       
+        # Default to push all lists for the given database
+        list_name = opts[:list_name] || '*'
+      
+        # Default to push all shows for the given database
+        show_name = opts[:show_name] || '*'
+      
         # Check for CouchDB database
         if !COUCHDB_SERVER.databases.include?(full_db_name)
           response << "Database #{db} (#{full_db_name}) does not exist"
@@ -83,6 +89,51 @@ module CouchRestRails
             updates = couchdb_design_doc['updates'].merge!(updates)
           end
 
+          # Assemble shows for each design document
+          shows = {}
+          Dir.glob(File.join(designdoc, "shows", show_name)).each do |show|
+            # Load show from filesystem 
+            showfunc = IO.read(show)    if File.exist?(show)
+            if showfunc.empty?
+              response << "No show files were found in #{CouchRestRails.views_path}/#{db}/#{File.basename(designdoc)}/shows/#{File.basename(show)}.js" 
+              next
+            else
+              shows[File.basename(show, '.js')] = showfunc
+            end
+
+            # Warn if overwriting shows on Couch 
+            if couchdb_design_doc && couchdb_design_doc['shows'] && couchdb_design_doc['shows'][File.basename(show, '.js')]
+              response << "Overwriting existing show '#{File.basename(show, '.js')}' in _design/#{File.basename(designdoc)}"
+            end
+          end
+          # Merge with existing shows
+	  if ! couchdb_design_doc.nil? && couchdb_design_doc.has_key?('shows')
+            shows = couchdb_design_doc['shows'].merge!(shows)
+          end
+
+          # Assemble lists for each design document
+          lists = {}
+          Dir.glob(File.join(designdoc, "lists", list_name)).each do |list|
+            # Load list from filesystem 
+            listfunc = IO.read(list)    if File.exist?(list)
+            if listfunc.empty?
+              response << "No list files were found in #{CouchRestRails.views_path}/#{db}/#{File.basename(designdoc)}/lists/#{File.basename(list)}.js" 
+              next
+            else
+              lists[File.basename(list, '.js')] = listfunc
+            end
+
+            # Warn if overwriting lists on Couch 
+            if couchdb_design_doc && couchdb_design_doc['lists'] && couchdb_design_doc['lists'][File.basename(list, '.js')]
+              response << "Overwriting existing list '#{File.basename(list, '.js')}' in _design/#{File.basename(designdoc)}"
+            end
+          end
+          # Merge with existing lists
+	  if ! couchdb_design_doc.nil? && couchdb_design_doc.has_key?('lists')
+            lists = couchdb_design_doc['lists'].merge!(lists)
+          end
+
+          # deal with the validate_doc_update script
           validate_doc_update = nil
           # fetch an existing validate doc if it exists
           if couchdb_design_doc && couchdb_design_doc['validate_doc_update'] 
@@ -104,16 +155,22 @@ module CouchRestRails
               'language' => 'javascript',
               'views' => views,
               'updates' => updates,
-              'validate_doc_update' => validate_doc_update
+              'validate_doc_update' => validate_doc_update,
+              'lists' => lists,
+              'shows' => shows
             }
           else
             couchdb_design_doc['views'] = views
             couchdb_design_doc['updates'] = updates
             couchdb_design_doc['validate_doc_update'] = validate_doc_update
+            couchdb_design_doc['lists'] = lists
+            couchdb_design_doc['shows'] = shows
           end
           db_conn.save_doc(couchdb_design_doc)
           response << "Pushed views to #{full_db_name}/_design/#{File.basename(designdoc)}: #{views.keys.join(', ')}"
           response << "Pushed updates to #{full_db_name}/_design/#{File.basename(designdoc)}: #{updates.keys.join(', ')}"
+          response << "Pushed lists to #{full_db_name}/_design/#{File.basename(designdoc)}: #{lists.keys.join(', ')}"
+          response << "Pushed shows to #{full_db_name}/_design/#{File.basename(designdoc)}: #{shows.keys.join(', ')}"
         end	# loop on design doc
       end	# loop on databases
     end
