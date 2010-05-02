@@ -25,6 +25,13 @@ module CouchRestRails
         # Default to push all shows for the given database
         show_name = opts[:show_name] || '*'
       
+        # Default to push all shows for the given database
+        filter_name = opts[:filter_name] || '*'
+
+        # Default to push all shows for the given database
+        attachment_name = opts[:attachment_name] || '**/*'
+
+
         # Check for CouchDB database
         if !COUCHDB_SERVER.databases.include?(full_db_name)
           response << "Database #{db} (#{full_db_name}) does not exist"
@@ -133,6 +140,28 @@ module CouchRestRails
             lists = couchdb_design_doc['lists'].merge!(lists)
           end
 
+          # Assemble filters for each design document
+          filters = {}
+          Dir.glob(File.join(designdoc, "filters", filter_name)).each do |filter|
+            # Load filter from filesystem 
+            filterfunc = IO.read(filter)    if File.exist?(filter)
+            if filterfunc.empty?
+              response << "No filter files were found in #{CouchRestRails.views_path}/#{db}/#{File.basename(designdoc)}/filters/#{File.basename(filter)}.js" 
+              next
+            else
+              filters[File.basename(filter, '.js')] = filterfunc
+            end
+
+            # Warn if overwriting filters on Couch 
+            if couchdb_design_doc && couchdb_design_doc['filters'] && couchdb_design_doc['filters'][File.basename(filter, '.js')]
+              response << "Overwriting existing filter '#{File.basename(filter, '.js')}' in _design/#{File.basename(designdoc)}"
+            end
+          end
+          # Merge with existing filters
+	  if ! couchdb_design_doc.nil? && couchdb_design_doc.has_key?('filters')
+            filters = couchdb_design_doc['filters'].merge!(filters)
+          end
+
           # deal with the validate_doc_update script
           validate_doc_update = nil
           # fetch an existing validate doc if it exists
@@ -157,7 +186,8 @@ module CouchRestRails
               'updates' => updates,
               'validate_doc_update' => validate_doc_update,
               'lists' => lists,
-              'shows' => shows
+              'shows' => shows,
+              'filters' => filters
             }
           else
             couchdb_design_doc['views'] = views
@@ -165,6 +195,7 @@ module CouchRestRails
             couchdb_design_doc['validate_doc_update'] = validate_doc_update
             couchdb_design_doc['lists'] = lists
             couchdb_design_doc['shows'] = shows
+            couchdb_design_doc['filters'] = filters
           end
           db_conn.save_doc(couchdb_design_doc)
 
@@ -172,9 +203,10 @@ module CouchRestRails
           response << "Pushed updates to #{full_db_name}/_design/#{File.basename(designdoc)}: #{updates.keys.join(', ')}"
           response << "Pushed lists to #{full_db_name}/_design/#{File.basename(designdoc)}: #{lists.keys.join(', ')}"
           response << "Pushed shows to #{full_db_name}/_design/#{File.basename(designdoc)}: #{shows.keys.join(', ')}"
+          response << "Pushed filters to #{full_db_name}/_design/#{File.basename(designdoc)}: #{filters.keys.join(', ')}"
 
           if File.exists?(File.join(designdoc, "attachments")) && File.directory?(File.join(designdoc, "attachments"))
-            Dir.glob(File.join(designdoc, "attachments", "**/*")).each do |attachment|
+            Dir.glob(File.join(designdoc, "attachments", attachment_name)).each do |attachment|
                 next if File.directory?(attachment)
 		name = attachment.sub(File.join(designdoc, "attachments") + "/", "")
                 couchdb_design_doc.put_attachment(name, IO.read(attachment))
