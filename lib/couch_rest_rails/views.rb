@@ -206,6 +206,9 @@ module CouchRestRails
           response << "Pushed filters to #{full_db_name}/_design/#{File.basename(designdoc)}: #{filters.keys.join(', ')}"
 
           if File.exists?(File.join(designdoc, "attachments")) && File.directory?(File.join(designdoc, "attachments"))
+            # re-fetch as a proper design doc in case it was new, otherwise file attachments will NOT work
+            couchdb_design_doc = db_conn.get("_design/#{File.basename(designdoc)}") rescue nil
+
             Dir.glob(File.join(designdoc, "attachments", attachment_name)).each do |attachment|
                 next if File.directory?(attachment)
 		name = attachment.sub(File.join(designdoc, "attachments") + "/", "")
