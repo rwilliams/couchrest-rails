@@ -25,8 +25,14 @@ module CouchRestRails
         # Default to push all shows for the given database
         show_name = opts[:show_name] || '*'
       
-        # Default to push all shows for the given database
+        # Default to push all filters for the given database
         filter_name = opts[:filter_name] || '*'
+
+        # Default to push all libs for the given database
+        lib_name = opts[:lib_name] || '**/*.js'
+
+        # Default to push all templates for the given database
+        template_name = opts[:template_name] || '**/*'
 
         # Default to push all shows for the given database
         attachment_name = opts[:attachment_name] || '**/*'
@@ -162,6 +168,63 @@ module CouchRestRails
             filters = couchdb_design_doc['filters'].merge!(filters)
           end
 
+#------
+          # deal with the lib scripts
+          libs = {}
+          # fetch an existing lib structure if it exists
+          if couchdb_design_doc && couchdb_design_doc['libs'] 
+            validate_doc_update = couchdb_design_doc['libs']
+          end
+
+          if File.exists?(File.join(designdoc, "libs")) && File.directory?(File.join(designdoc, "libs"))
+            Dir.glob(File.join(designdoc, "libs", lib_name)).each do |lib|
+                next if File.directory?(lib)
+		name = lib.sub(File.join(designdoc, "libs") + "/", "")
+                parts = name.split(/\//)
+		file = File.basename(parts.pop, '.js')
+		newnode = libs		# init for loop below
+		parts.each do |dir|
+			if ! newnode.has_key?(dir)
+                        	newnode[dir] = {}	# init empty dir node
+			end
+			newnode = newnode[dir]		# descend
+		end
+		if newnode.has_key?(file)
+                  response << "Overwriting existing library file #{name} in _design/#{File.basename(designdoc)}"
+                end
+		newnode[file] = IO.read(lib)		# newnode will be the proper place to put this.
+            end
+          end
+#------
+#------
+          # deal with the templates
+          templates = {}
+          # fetch an existing templates structure if it exists
+          if couchdb_design_doc && couchdb_design_doc['templates'] 
+            validate_doc_update = couchdb_design_doc['templates']
+          end
+
+          if File.exists?(File.join(designdoc, "templates")) && File.directory?(File.join(designdoc, "templates"))
+            Dir.glob(File.join(designdoc, "templates", template_name)).each do |template|
+                next if File.directory?(template)
+		name = template.sub(File.join(designdoc, "templates") + "/", "")
+                parts = name.split(/\//)
+		file = File.basename(parts.pop, '.html')
+		newnode = templates		# init for loop below
+		parts.each do |dir|
+			if ! newnode.has_key?(dir)
+                        	newnode[dir] = {}	# init empty dir node
+			end
+			newnode = newnode[dir]		# descend
+		end
+		if newnode.has_key?(file)
+                  response << "Overwriting existing library file #{name} in _design/#{File.basename(designdoc)}"
+                end
+		newnode[file] = IO.read(template)		# newnode will be the proper place to put this.
+            end
+          end
+#------
+
           # deal with the validate_doc_update script
           validate_doc_update = nil
           # fetch an existing validate doc if it exists
@@ -186,16 +249,20 @@ module CouchRestRails
               'updates' => updates,
               'validate_doc_update' => validate_doc_update,
               'lists' => lists,
+              'libs' => libs,
               'shows' => shows,
-              'filters' => filters
+              'filters' => filters,
+              'templates' => templates
             }
           else
             couchdb_design_doc['views'] = views
             couchdb_design_doc['updates'] = updates
             couchdb_design_doc['validate_doc_update'] = validate_doc_update
             couchdb_design_doc['lists'] = lists
+            couchdb_design_doc['libs'] = libs
             couchdb_design_doc['shows'] = shows
             couchdb_design_doc['filters'] = filters
+            couchdb_design_doc['templates'] = templates
           end
           db_conn.save_doc(couchdb_design_doc)
 
