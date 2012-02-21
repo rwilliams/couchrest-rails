@@ -8,7 +8,7 @@ module CouchRestRails
       CouchRestRails.process_database_method(database_name) do |db, response|
         
         # Setup up database directory
-        database_path = File.join(RAILS_ROOT, CouchRestRails.views_path, db)
+        database_path = File.join(Rails.root, CouchRestRails.views_path, db)
         unless File.exist?(database_path)
           FileUtils.mkdir_p(database_path)
           response << "Created #{File.join(CouchRestRails.views_path, db)} design doc directory"
@@ -16,7 +16,7 @@ module CouchRestRails
 
 	# XXX no longer relevant at this level, unless we go snoop around designdoc land
         # Setup up views directory
-        #database_views_path = File.join(RAILS_ROOT, CouchRestRails.views_path, db, 'views')
+        #database_views_path = File.join(Rails.root, CouchRestRails.views_path, db, 'views')
         #unless File.exist?(database_views_path)
         #  FileUtils.mkdir_p(database_views_path)
         #  response << "Created #{File.join(CouchRestRails.views_path, db, 'views')} views directory"
@@ -24,7 +24,7 @@ module CouchRestRails
         
         # Setup the Lucene directory if enabled
         if CouchRestRails.use_lucene
-          database_lucene_path = File.join(RAILS_ROOT, CouchRestRails.lucene_path, db, 'lucene')
+          database_lucene_path = File.join(Rails.root, CouchRestRails.lucene_path, db, 'lucene')
           unless File.exist?(database_lucene_path)
             FileUtils.mkdir_p(database_lucene_path)
             response << "Created #{File.join(CouchRestRails.lucene_path, db, 'lucene')} Lucene directory"
@@ -64,13 +64,13 @@ module CouchRestRails
         end
         
         # Warn if views path still present for database
-        if File.exist?(File.join(RAILS_ROOT, CouchRestRails.views_path, db, 'views'))
+        if File.exist?(File.join(Rails.root, CouchRestRails.views_path, db, 'views'))
           response << "WARNING: #{File.join(CouchRestRails.views_path, db, 'views')} views path still present"
         end
         
         # Warn if Lucene path still present for database
         if CouchRestRails.use_lucene
-          if File.exist?(File.join(RAILS_ROOT, CouchRestRails.lucene_path, db, 'views'))
+          if File.exist?(File.join(Rails.root, CouchRestRails.lucene_path, db, 'views'))
             response << "WARNING: #{File.join(CouchRestRails.lucene_path, db, 'views')} Lucene path still present"
           end
         end
@@ -82,7 +82,7 @@ module CouchRestRails
     def list
       databases = []
       # Ensure models are loaded
-      Dir.glob(File.join(RAILS_ROOT, 'app', 'models', '*.rb')).map { |m| require_dependency m }
+      Dir.glob(File.join(Rails.root, 'app', 'models', '*.rb')).map { |m| require_dependency m }
       Object.subclasses_of(CouchRestRails::Document).collect do |doc|
         raise "#{doc.name} does not have a database defined" unless doc.database
         databases << doc.unadorned_database_name

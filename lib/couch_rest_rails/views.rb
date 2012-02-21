@@ -45,7 +45,7 @@ module CouchRestRails
         end
         
         # Check for views directory
-        unless File.exist?(File.join(RAILS_ROOT, CouchRestRails.views_path, db))
+        unless File.exist?(File.join(Rails.root, CouchRestRails.views_path, db))
           response << "Views directory (#{CouchRestRails.views_path}/#{db}) does not exist" 
           next
         end
@@ -54,7 +54,7 @@ module CouchRestRails
         db_conn = CouchRest.database(full_db_path)
 
 	# For each design doc seen
-        Dir.glob(File.join(RAILS_ROOT, CouchRestRails.views_path, db, design_doc_name)).each do |designdoc|
+        Dir.glob(File.join(Rails.root, CouchRestRails.views_path, db, design_doc_name)).each do |designdoc|
           couchdb_design_doc = db_conn.get("_design/#{File.basename(designdoc)}") rescue nil
 
           # Assemble views for each design document
