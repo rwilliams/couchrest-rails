@@ -226,6 +226,7 @@ module CouchRestRails
 #------
 
           # deal with the validate_doc_update script
+=begin
           validate_doc_update = nil
           # fetch an existing validate doc if it exists
           if couchdb_design_doc && couchdb_design_doc['validate_doc_update'] 
@@ -238,7 +239,7 @@ module CouchRestRails
             end
             validate_doc_update = IO.read(File.join(designdoc, "validate_doc_update.js"))
           end
-
+=end
 
           # Save or update
           if couchdb_design_doc.nil?
@@ -246,30 +247,30 @@ module CouchRestRails
               "_id" => "_design/#{File.basename(designdoc)}", 
               'language' => 'javascript',
               'views' => views,
-              'updates' => updates,
-              'validate_doc_update' => validate_doc_update,
-              'lists' => lists,
-              'libs' => libs,
-              'shows' => shows,
-              'filters' => filters,
-              'templates' => templates
+              #'updates' => updates,
+              #'validate_doc_update' => validate_doc_update,
+              #'lists' => lists,
+              #'libs' => libs,
+              #'shows' => shows,
+              'filters' => filters
+              #'templates' => templates
             }
           else
             couchdb_design_doc['views'] = views
-            couchdb_design_doc['updates'] = updates
-            couchdb_design_doc['validate_doc_update'] = validate_doc_update
-            couchdb_design_doc['lists'] = lists
-            couchdb_design_doc['libs'] = libs
-            couchdb_design_doc['shows'] = shows
+            #couchdb_design_doc['updates'] = updates
+            #couchdb_design_doc['validate_doc_update'] = validate_doc_update
+            #couchdb_design_doc['lists'] = lists
+            #couchdb_design_doc['libs'] = libs
+            #couchdb_design_doc['shows'] = shows
             couchdb_design_doc['filters'] = filters
-            couchdb_design_doc['templates'] = templates
+            #couchdb_design_doc['templates'] = templates
           end
           db_conn.save_doc(couchdb_design_doc)
 
           response << "Pushed views to #{full_db_name}/_design/#{File.basename(designdoc)}: #{views.keys.join(', ')}"
-          response << "Pushed updates to #{full_db_name}/_design/#{File.basename(designdoc)}: #{updates.keys.join(', ')}"
-          response << "Pushed lists to #{full_db_name}/_design/#{File.basename(designdoc)}: #{lists.keys.join(', ')}"
-          response << "Pushed shows to #{full_db_name}/_design/#{File.basename(designdoc)}: #{shows.keys.join(', ')}"
+          #response << "Pushed updates to #{full_db_name}/_design/#{File.basename(designdoc)}: #{updates.keys.join(', ')}"
+          #response << "Pushed lists to #{full_db_name}/_design/#{File.basename(designdoc)}: #{lists.keys.join(', ')}"
+          #response << "Pushed shows to #{full_db_name}/_design/#{File.basename(designdoc)}: #{shows.keys.join(', ')}"
           response << "Pushed filters to #{full_db_name}/_design/#{File.basename(designdoc)}: #{filters.keys.join(', ')}"
 
           if File.exists?(File.join(designdoc, "attachments")) && File.directory?(File.join(designdoc, "attachments"))
